@@ -15,10 +15,13 @@ local defaults = {
   width = 220,
   height = 28,
   scale = 1.0,
-  locked = false,
+  locked = true,
   showPercentText = true,
-  showTooltip = true,   -- tooltip toggle
-  hideAtFull = false,   -- NEW: hide bar when at 100%
+  showTooltip = true,           -- tooltip toggle
+  hideAtFull = false,           -- hide bar when at 100%
+  orientation = "HORIZONTAL",   -- "HORIZONTAL" or "VERTICAL"
+  verticalText = true,          -- stack % text when bar is vertical
+  autoSwapSize = true,         -- (optional) auto swap width/height when orientation changes
 }
 
 -- Utility: apply defaults
@@ -57,20 +60,18 @@ bg:SetAlpha(0.25)
 local text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 text:SetText("100%")
 
--- Resize grip
+-- (No user-resize via dragging)
 local resize = CreateFrame("Button", nil, frame)
-resize:SetSize(16, 16)
-resize:SetPoint("BOTTOMRIGHT", -6, 6)
-resize:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-resize:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
-resize:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+resize:Hide()
+resize:EnableMouse(false)
 
+-- Keep resizable for API safety; user cannot trigger StartSizing
 frame:SetResizable(true)
 if frame.SetResizeBounds then
-  frame:SetResizeBounds(160, 24, 600, 60) -- Retail DF+
+  frame:SetResizeBounds(160, 20, 800, 800) -- broad bounds; actual limits enforced by sliders
 else
-  frame:SetMinResize(160, 24)             -- pre-DF fallback
-  frame:SetMaxResize(600, 60)
+  frame:SetMinResize(160, 20)
+  frame:SetMaxResize(800, 800)
 end
 
 -- Layout
@@ -87,7 +88,7 @@ local function Layout()
   text:SetPoint("CENTER", bar, "CENTER", 0, 0)
 end
 
--- Dragging
+-- Dragging (position only)
 frame:SetScript("OnDragStart", function(self)
   if DB.locked then return end
   self:StartMoving()
@@ -99,27 +100,14 @@ frame:SetScript("OnDragStop", function(self)
     point, (relativeTo and relativeTo:GetName()) or "UIParent", relativePoint, x, y
 end)
 
--- Resizing
-resize:SetScript("OnMouseDown", function()
-  if DB.locked then return end
-  frame:StartSizing("BOTTOMRIGHT")
-end)
-resize:SetScript("OnMouseUp", function()
-  frame:StopMovingOrSizing()
-  DB.width = math.floor(frame:GetWidth() + 0.5)
-  DB.height = math.floor(frame:GetHeight() + 0.5)
-  Layout()
-end)
+-- Ensure no mouse-sizable behavior via our handle
+resize:SetScript("OnMouseDown", nil)
+resize:SetScript("OnMouseUp", nil)
 
--- Lock visuals (keep mouse enabled so tooltip still fires)
+-- Lock visuals (mouse stays enabled so tooltip still fires)
 local function UpdateLockState()
-  -- frame:EnableMouse(false) -- REMOVED to allow tooltip when locked
   frame:EnableMouse(true)
-  if DB.locked then
-    resize:Hide()
-  else
-    resize:Show()
-  end
+  resize:Hide() -- never show; resizing is options-only now
 end
 
 -- Color thresholds
@@ -147,14 +135,24 @@ local function GetOverallDurability()
   return math.floor((totalCur / totalMax) * 100 + 0.5)
 end
 
--- Refresh (now also applies hide-at-full)
+-- Format % text (stack vertically when vertical & enabled)
+local function FormatPercentText(pct)
+  local s = pct .. "%"
+  if (DB.orientation == "VERTICAL") and DB.verticalText then
+    local stacked = s:gsub(".", "%0\n")
+    return stacked:sub(1, -2) -- strip trailing newline
+  end
+  return s
+end
+
+-- Refresh (applies color, text, and hide-at-full)
 local function Refresh()
   local pct = GetOverallDurability()
   bar:SetValue(pct)
   SetBarColor(pct)
 
   if DB.showPercentText then
-    text:SetText(pct .. "%")
+    text:SetText(FormatPercentText(pct))
     text:Show()
   else
     text:Hide()
@@ -164,6 +162,43 @@ local function Refresh()
     frame:Hide()
   else
     frame:Show()
+  end
+end
+
+-- Forward declaration of options panel for slider range updates
+local optionsPanel
+
+-- Orientation helper (handles repaint + slider ranges)
+local function UpdateOrientation()
+  local ori = (DB.orientation == "VERTICAL") and "VERTICAL" or "HORIZONTAL"
+
+  if bar.SetOrientation then
+    bar:SetOrientation(ori)
+    if bar.SetReverseFill then bar:SetReverseFill(false) end
+    bar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
+    bar:SetValue(bar:GetValue())
+  end
+
+  if DB.autoSwapSize then
+    if ori == "VERTICAL" and DB.height < DB.width then
+      DB.width, DB.height = DB.height, DB.width
+      frame:SetSize(DB.width, DB.height)
+    elseif ori == "HORIZONTAL" and DB.width < DB.height then
+      DB.width, DB.height = DB.height, DB.width
+      frame:SetSize(DB.width, DB.height)
+    end
+  else
+    if ori == "VERTICAL" and DB.height <= DB.width then
+      DB.height = math.min(math.max(DB.width + 40, DB.height), 800) -- at least taller than width
+      frame:SetHeight(DB.height)
+    end
+  end
+
+  Layout()
+  Refresh()
+
+  if optionsPanel and optionsPanel._ApplySliderRanges then
+    optionsPanel._ApplySliderRanges(ori)
   end
 end
 
@@ -210,7 +245,7 @@ local function ShowTooltip()
   end
 
   GameTooltip:AddLine(" ", 0, 0, 0)
-  GameTooltip:AddLine("Tip: Drag to move; resize from corner when unlocked.", 0.7, 0.7, 0.7)
+  GameTooltip:AddLine("Tip: Drag to move. Size via Options > AddOns > Durability Bar.", 0.7, 0.7, 0.7)
   GameTooltip:Show()
 end
 
@@ -219,7 +254,6 @@ frame:HookScript("OnLeave", function() GameTooltip:Hide() end)
 -- ===== end Tooltip =====
 
 -- ===== Options Panel =====
-local optionsPanel
 local function CreateOptionsPanel()
   if optionsPanel then return end
 
@@ -238,7 +272,7 @@ local function CreateOptionsPanel()
   -- Lock checkbox
   local lockCB = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
   lockCB:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", 0, -12)
-  lockCB.text:SetText("Lock frame (disable drag/resize)")
+  lockCB.text:SetText("Lock frame (disable drag)")
   lockCB:SetScript("OnClick", function(self)
     DB.locked = self:GetChecked()
     UpdateLockState()
@@ -262,7 +296,7 @@ local function CreateOptionsPanel()
     if not DB.showTooltip then GameTooltip:Hide() end
   end)
 
-  -- Hide-at-full checkbox (NEW)
+  -- Hide-at-full checkbox
   local hideCB = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
   hideCB:SetPoint("TOPLEFT", tipCB, "BOTTOMLEFT", 0, -8)
   hideCB.text:SetText("Hide when at 100% durability")
@@ -280,35 +314,187 @@ local function CreateOptionsPanel()
     DB.scale = tonumber(string.format("%.2f", val))
     frame:SetScale(DB.scale)
   end)
+  scaleSL:EnableMouseWheel(true)
+  scaleSL:SetScript("OnMouseWheel", function(_, delta)
+    local step = IsShiftKeyDown() and 0.1 or 0.05
+    local min, max = scaleSL:GetMinMaxValues()
+    local v = math.min(max, math.max(min, (DB.scale or 1) + (delta > 0 and step or -step)))
+    v = tonumber(string.format("%.2f", v))
+    scaleSL:SetValue(v)
+  end)
   scaleSL.Low:SetText("0.5"); scaleSL.High:SetText("2.0"); scaleSL.Text:SetText("Scale")
 
   -- Width slider
   local widthSL = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-  widthSL:SetPoint("TOPLEFT", scaleSL, "BOTTOMLEFT", 0, -24)
-  widthSL:SetWidth(260); widthSL:SetMinMaxValues(160, 600)
+  widthSL:SetPoint("TOPLEFT", scaleSL, "BOTTOMLEFT", 24, -28) -- leave space for left nudge
+  widthSL:SetWidth(212) -- narrower to make space for arrows
   widthSL:SetValueStep(1); widthSL:SetObeyStepOnDrag(true)
-  widthSL.Low:SetText("160"); widthSL.High:SetText("600"); widthSL.Text:SetText("Width")
+
+  -- Height slider
+  local heightSL = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
+  heightSL:SetPoint("TOPLEFT", widthSL, "BOTTOMLEFT", 0, -28)
+  heightSL:SetWidth(212)
+  heightSL:SetValueStep(1); heightSL:SetObeyStepOnDrag(true)
+
+  -- Helper: nudger buttons and mouse wheel for a slider
+  local function AddNudgers(slider, onChange)
+    -- Left (decrement)
+    local dec = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    dec:SetSize(22, 22)
+    dec:SetText("-")
+    dec:SetPoint("RIGHT", slider, "LEFT", -6, 0)
+    dec:SetScript("OnClick", function()
+      local min, max = slider:GetMinMaxValues()
+      local cur = slider:GetValue()
+      local step = IsShiftKeyDown() and 5 or 1
+      local newv = math.max(min, cur - step)
+      slider:SetValue(newv)
+      if onChange then onChange(newv) end
+    end)
+
+    -- Right (increment)
+    local inc = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    inc:SetSize(22, 22)
+    inc:SetText("+")
+    inc:SetPoint("LEFT", slider, "RIGHT", 6, 0)
+    inc:SetScript("OnClick", function()
+      local min, max = slider:GetMinMaxValues()
+      local cur = slider:GetValue()
+      local step = IsShiftKeyDown() and 5 or 1
+      local newv = math.min(max, cur + step)
+      slider:SetValue(newv)
+      if onChange then onChange(newv) end
+    end)
+
+    slider:EnableMouseWheel(true)
+    slider:SetScript("OnMouseWheel", function(_, delta)
+      local min, max = slider:GetMinMaxValues()
+      local cur = slider:GetValue()
+      local step = IsShiftKeyDown() and 5 or 1
+      local newv = cur + (delta > 0 and step or -step)
+      newv = math.max(min, math.min(max, newv))
+      slider:SetValue(newv)
+      if onChange then onChange(newv) end
+    end)
+
+    return dec, inc
+  end
+
+  -- Slider handlers: repaint after change
   widthSL:SetScript("OnValueChanged", function(self, val)
     DB.width = math.floor(val + 0.5)
     frame:SetWidth(DB.width)
     Layout()
+    Refresh()
   end)
-
-  -- Height slider
-  local heightSL = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-  heightSL:SetPoint("TOPLEFT", widthSL, "BOTTOMLEFT", 0, -24)
-  heightSL:SetWidth(260); heightSL:SetMinMaxValues(24, 60)
-  heightSL:SetValueStep(1); heightSL:SetObeyStepOnDrag(true)
-  heightSL.Low:SetText("24"); heightSL.High:SetText("60"); heightSL.Text:SetText("Height")
   heightSL:SetScript("OnValueChanged", function(self, val)
     DB.height = math.floor(val + 0.5)
     frame:SetHeight(DB.height)
     Layout()
+    Refresh()
   end)
+
+  -- Add nudgers to width/height
+  AddNudgers(widthSL, function(v)
+    -- onChange already calls SetValue via SetValue in nudger; the slider's OnValueChanged repaints
+  end)
+  AddNudgers(heightSL, function(v) end)
+
+  -- Orientation radios
+  local oriLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  oriLabel:SetPoint("TOPLEFT", heightSL, "BOTTOMLEFT", -24, -24)
+  oriLabel:SetText("Orientation")
+
+  local oriH = CreateFrame("CheckButton", nil, panel, "UIRadioButtonTemplate")
+  oriH:SetPoint("TOPLEFT", oriLabel, "BOTTOMLEFT", 0, -6)
+  oriH.text:SetText("Horizontal")
+
+  local oriV = CreateFrame("CheckButton", nil, panel, "UIRadioButtonTemplate")
+  oriV:SetPoint("LEFT", oriH, "RIGHT", 120, 0)
+  oriV.text:SetText("Vertical")
+
+  local function SetOri(choice)
+    DB.orientation = choice
+    UpdateOrientation()
+    oriH:SetChecked(choice == "HORIZONTAL")
+    oriV:SetChecked(choice == "VERTICAL")
+  end
+
+  oriH:SetScript("OnClick", function() SetOri("HORIZONTAL") end)
+  oriV:SetScript("OnClick", function() SetOri("VERTICAL") end)
+
+  -- Vertical text checkbox
+  local vtextCB = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+  vtextCB:SetPoint("TOPLEFT", oriLabel, "BOTTOMLEFT", 0, -36)
+  vtextCB.text:SetText("Stack % text vertically when bar is vertical")
+  vtextCB:SetScript("OnClick", function(self)
+    DB.verticalText = self:GetChecked()
+    Refresh()
+  end)
+
+  -- Auto-swap size checkbox (optional)
+  local autoswapCB = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+  autoswapCB:SetPoint("TOPLEFT", vtextCB, "BOTTOMLEFT", 0, -8)
+  autoswapCB.text:SetText("Auto swap width/height when orientation changes")
+  autoswapCB:SetScript("OnClick", function(self)
+    DB.autoSwapSize = self:GetChecked()
+  end)
+
+  -- Manual swap button
+  local swapBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+  swapBtn:SetPoint("TOPLEFT", autoswapCB, "BOTTOMLEFT", 0, -12)
+  swapBtn:SetSize(160, 22)
+  swapBtn:SetText("Swap Width <-> Height")
+  swapBtn:SetScript("OnClick", function()
+    DB.width, DB.height = DB.height, DB.width
+    frame:SetSize(DB.width, DB.height)
+    Layout()
+    Refresh()
+    if optionsPanel and optionsPanel._ApplySliderRanges then
+      optionsPanel._ApplySliderRanges(DB.orientation)
+    end
+  end)
+
+  -- Dynamically adjust slider ranges & labels for the chosen orientation
+  function panel._ApplySliderRanges(ori)
+    if ori == "VERTICAL" then
+      -- Vertical: thin (width), long (height)
+      widthSL:SetMinMaxValues(16, 120)
+      widthSL.Low:SetText("16"); widthSL.High:SetText("120")
+      widthSL.Text:SetText("Width (Thickness)")
+
+      heightSL:SetMinMaxValues(120, 800)
+      heightSL.Low:SetText("120"); heightSL.High:SetText("800")
+      heightSL.Text:SetText("Height (Length)")
+
+      -- Clamp current DB values into new ranges
+      DB.width  = math.max(16, math.min(DB.width, 120))
+      DB.height = math.max(120, math.min(DB.height, 800))
+    else
+      -- Horizontal: wide (width), short (height)
+      widthSL:SetMinMaxValues(160, 800)
+      widthSL.Low:SetText("160"); widthSL.High:SetText("800")
+      widthSL.Text:SetText("Width")
+
+      heightSL:SetMinMaxValues(20, 120)
+      heightSL.Low:SetText("20"); heightSL.High:SetText("120")
+      heightSL.Text:SetText("Height")
+
+      DB.width  = math.max(160, math.min(DB.width, 800))
+      DB.height = math.max(20,  math.min(DB.height, 120))
+    end
+
+    -- Reflect clamped values on the frame and sliders
+    frame:SetSize(DB.width, DB.height)
+    widthSL:SetValue(DB.width)
+    heightSL:SetValue(DB.height)
+    Layout()
+    Refresh()
+  end
 
   -- Buttons
   local resetBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-  resetBtn:SetPoint("TOPLEFT", heightSL, "BOTTOMLEFT", 0, -20)
+  resetBtn:SetPoint("TOPLEFT", swapBtn, "BOTTOMLEFT", 0, -20)
   resetBtn:SetSize(120, 22); resetBtn:SetText("Reset")
   resetBtn:SetScript("OnClick", function()
     wipe(DurabilityBarDB)
@@ -318,12 +504,19 @@ local function CreateOptionsPanel()
     frame:SetSize(DB.width, DB.height)
     frame:SetPoint(DB.point, UIParent, DB.relativePoint, DB.x, DB.y)
     frame:SetScale(DB.scale)
+    UpdateOrientation()
     Layout(); UpdateLockState(); Refresh()
+    -- reflect in UI
     lockCB:SetChecked(DB.locked)
     textCB:SetChecked(DB.showPercentText)
     tipCB:SetChecked(DB.showTooltip)
+    vtextCB:SetChecked(DB.verticalText)
     hideCB:SetChecked(DB.hideAtFull)
-    scaleSL:SetValue(DB.scale); widthSL:SetValue(DB.width); heightSL:SetValue(DB.height)
+    autoswapCB:SetChecked(DB.autoSwapSize)
+    oriH:SetChecked(true); oriV:SetChecked(false)
+    scaleSL:SetValue(DB.scale)
+    -- Apply ranges after reset (based on default orientation)
+    optionsPanel._ApplySliderRanges(DB.orientation)
     Print("Position & size reset.")
   end)
 
@@ -349,9 +542,14 @@ local function CreateOptionsPanel()
     textCB:SetChecked(DB.showPercentText)
     tipCB:SetChecked(DB.showTooltip)
     hideCB:SetChecked(DB.hideAtFull)
+    vtextCB:SetChecked(DB.verticalText)
+    autoswapCB:SetChecked(DB.autoSwapSize)
     scaleSL:SetValue(DB.scale or 1)
-    widthSL:SetValue(DB.width or 220)
-    heightSL:SetValue(DB.height or 28)
+    oriH:SetChecked((DB.orientation or "HORIZONTAL") == "HORIZONTAL")
+    oriV:SetChecked((DB.orientation or "HORIZONTAL") == "VERTICAL")
+
+    -- Apply slider ranges & values for current orientation
+    optionsPanel._ApplySliderRanges(DB.orientation)
   end)
 
   -- Register with Retail Settings UI (Dragonflight+)
@@ -376,6 +574,7 @@ ev:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
 ev:RegisterEvent("MERCHANT_SHOW")
 ev:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 ev:RegisterEvent("PLAYER_REGEN_DISABLED") -- hide tooltip on combat start
+ev:RegisterEvent("PLAYER_LOGOUT")         -- persist DB on logout
 
 ev:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
@@ -394,6 +593,7 @@ ev:SetScript("OnEvent", function(_, event, arg1)
 
     Layout()
     UpdateLockState()
+    UpdateOrientation()
     Refresh()
     CreateOptionsPanel()
 
@@ -424,6 +624,7 @@ ev:SetScript("OnEvent", function(_, event, arg1)
         frame:SetSize(DB.width, DB.height)
         frame:SetPoint(DB.point, UIParent, DB.relativePoint, DB.x, DB.y)
         frame:SetScale(DB.scale)
+        UpdateOrientation()
         Layout(); UpdateLockState(); Refresh()
         Print("Position & size reset.")
 
@@ -431,20 +632,36 @@ ev:SetScript("OnEvent", function(_, event, arg1)
         DB.showPercentText = not DB.showPercentText; Refresh()
         Print("Percent text " .. (DB.showPercentText and "shown" or "hidden") .. ".")
 
+      elseif msg == "vertical" or msg == "v" then
+        DB.orientation = "VERTICAL"; UpdateOrientation(); Print("Orientation: vertical.")
+
+      elseif msg == "horizontal" or msg == "h" then
+        DB.orientation = "HORIZONTAL"; UpdateOrientation(); Print("Orientation: horizontal.")
+
+      elseif msg == "swap" then
+        DB.width, DB.height = DB.height, DB.width
+        frame:SetSize(DB.width, DB.height)
+        Layout()
+        Refresh()
+        if optionsPanel and optionsPanel._ApplySliderRanges then
+          optionsPanel._ApplySliderRanges(DB.orientation)
+        end
+        Print("Swapped width and height.")
+
       else
         Print("Use /durabar or /durabar options to open settings.")
       end
     end
 
-  elseif event == "PLAYER_LOGOUT" then
-    DurabilityBarDB = DB    
-
   elseif event == "PLAYER_REGEN_DISABLED" then
     GameTooltip:Hide()
+
+  elseif event == "PLAYER_LOGOUT" then
+    -- ensure latest DB persists
+    DurabilityBarDB = DB
 
   else
     -- Any other registered event just refreshes the value/color & hide logic
     Refresh()
   end
 end)
-
