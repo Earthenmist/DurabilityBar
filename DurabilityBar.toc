@@ -2,8 +2,9 @@
 ## Title: Simple Durability Bar
 ## Notes: Movable & resizable durability bar with Blizzard-style border and color thresholds.
 ## Author: Lanni of Alonsus
-## Version: 1.1.2
+## Version: 1.1.3
 ## SavedVariables: DurabilityBarDB
 ## IconTexture: Interface/AddOns/DurabilityBar/Icon.tga
 
 DurabilityBar.lua
+
