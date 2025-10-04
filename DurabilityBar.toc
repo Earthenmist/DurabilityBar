@@ -1,0 +1,8 @@
+## Interface: 110200
+## Title: Simple Durability Bar
+## Notes: Movable & resizable durability bar with Blizzard-style border and color thresholds.
+## Author: Lanni of Alonsus
+## Version: 1.1.2
+## SavedVariables: DurabilityBarDB
+
+DurabilityBar.lua
