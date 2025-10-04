@@ -4,5 +4,6 @@
 ## Author: Lanni of Alonsus
 ## Version: 1.1.2
 ## SavedVariables: DurabilityBarDB
+## IconTexture: Interface/AddOns/DurabilityBar/Icon.tga
 
 DurabilityBar.lua
