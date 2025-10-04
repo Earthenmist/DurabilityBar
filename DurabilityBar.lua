@@ -436,6 +436,9 @@ ev:SetScript("OnEvent", function(_, event, arg1)
       end
     end
 
+  elseif event == "PLAYER_LOGOUT" then
+    DurabilityBarDB = DB    
+
   elseif event == "PLAYER_REGEN_DISABLED" then
     GameTooltip:Hide()
 
@@ -444,3 +447,4 @@ ev:SetScript("OnEvent", function(_, event, arg1)
     Refresh()
   end
 end)
+
