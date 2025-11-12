@@ -1,11 +1,16 @@
-📜 Changelog - Version 1.1.5  
+📜 Changelog – Version 1.2.1-Beta  
   
-📅 Release Date: 04-10-2025  
+📅 Release Date: 12-11-2025  
   
-🛠️ Changes & Improvements:  
+🛠️ Changes & Improvements  
   
-✅ Added the ability for vertical or horizontal bar  
-  
-⚠️ Known Issues / Notes:  
-  
-🚀 Thank you for using Simple Durability Bar! If you encounter any issues 🚀  
+✅ Added improved Settings Panel integration using Blizzard’s modern Addon Settings API (with legacy fallback).  
+✅ Slash commands now open the correct settings panel consistently across Retail and Midnight Beta clients.  
+✅ Frame position saving now normalizes its anchor target (relativeTo) automatically for safer reloads.  
+✅ Minor code cleanup and UI polish for long-term stability.  
+✅ Verified compatibility with Midnight Beta clients.  
+
+⚠️ Known Issues / Notes  
+🔸 UI scale changes while in combat may temporarily delay bar repositioning.  
+
+🚀 Thank you for using Simple Durability Bar! If you encounter any issues or suggestions, please share them on our Discord. 🚀  
