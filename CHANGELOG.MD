@@ -5,7 +5,7 @@
 🛠️ Changes & Improvements  
   
 ✅ Added improved Settings Panel integration using Blizzard’s modern Addon Settings API (with legacy fallback).  
-✅ Slash commands now open the correct settings panel consistently across Retail and Midnight Beta clients.  
+✅ Slash commands now open the correct settings panel consistently across Midnight Beta clients.  
 ✅ Frame position saving now normalizes its anchor target (relativeTo) automatically for safer reloads.  
 ✅ Minor code cleanup and UI polish for long-term stability.  
 ✅ Verified compatibility with Midnight Beta clients.  
