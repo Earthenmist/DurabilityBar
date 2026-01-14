@@ -1,5 +1,16 @@
-local ADDON_NAME = ...
+local ADDON_NAME, addon = ...
+addon = addon or {}
 local DB
+
+local function GetVersion()
+  if C_AddOns and C_AddOns.GetAddOnMetadata then
+    return C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version")
+  elseif GetAddOnMetadata then
+    return GetAddOnMetadata(ADDON_NAME, "Version")
+  end
+end
+
+addon.version = GetVersion() or "Unknown"
 
 local function Print(msg)
   DEFAULT_CHAT_FRAME:AddMessage("|cff00ff88DurabilityBar:|r " .. tostring(msg))
@@ -265,8 +276,21 @@ local function CreateOptionsPanel()
   title:SetPoint("TOPLEFT", 16, -16)
   title:SetText("Durability Bar")
 
+  local versionText = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  versionText:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+  versionText:SetText("v" .. (addon.version or "Unknown"))
+
+  local function UpdateVersionText()
+    if addon.version and addon.version ~= "Unknown" then
+      versionText:SetText("v" .. addon.version)
+    else
+      C_Timer.After(1, UpdateVersionText)
+    end
+  end
+  UpdateVersionText()
+
   local sub = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-  sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
+  sub:SetPoint("TOPLEFT", versionText, "BOTTOMLEFT", 0, -6)
   sub:SetText("Adjust the appearance and behavior of the durability bar.")
 
   -- Lock checkbox
