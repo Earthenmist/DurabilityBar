@@ -1,12 +1,13 @@
-## Interface: 120000
+## Interface: 110207, 120000, 120001
 ## Title: Simple Durability Bar
-## Notes: Movable & resizable durability bar with Blizzard-style border and color thresholds.
+## Notes: Movable & resizable durability bar with Blizzard-style border and colour thresholds.
 ## Author: Lanni of Alonsus
-## Version: 1.2.1-Beta
+## Version: 1.2.2
 ## SavedVariables: DurabilityBarDB
 ## IconTexture: Interface/AddOns/DurabilityBar/Icon.tga
 
 DurabilityBar.lua
+
 
 
 
