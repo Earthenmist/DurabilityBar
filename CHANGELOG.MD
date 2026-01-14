@@ -1,6 +1,6 @@
-📜 Changelog – Version 1.2.2  
+📜 Changelog – Version 1.2.3  
   
-📅 Release Date: 14-01-2026  
+📅 Release Date: 15-01-2026  
   
 🛠️ Changes & Improvements  
   
@@ -10,8 +10,9 @@
 ✅ Minor code cleanup and UI polish for long-term stability.  
 ✅ Verified compatibility with Midnight Beta clients.  
 ✅ Added version number to Options Panel.  
+✅ Now supports all versions of Classic.  
 
 ⚠️ Known Issues / Notes  
 🔸 UI scale changes while in combat may temporarily delay bar repositioning.  
 
-🚀 Thank you for using Simple Durability Bar! If you encounter any issues or suggestions, please share them on our GitHun. 🚀  
+🚀 Thank you for using Simple Durability Bar! If you encounter any issues or suggestions, please share them on our GitHub. 🚀  
