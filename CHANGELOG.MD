@@ -1,6 +1,6 @@
-📜 Changelog – Version 1.2.3  
+📜 Changelog – Version 1.2.4  
   
-📅 Release Date: 15-01-2026  
+📅 Release Date: 16-01-2026  
   
 🛠️ Changes & Improvements  
   
@@ -11,6 +11,7 @@
 ✅ Verified compatibility with Midnight Beta clients.  
 ✅ Added version number to Options Panel.  
 ✅ Now supports all versions of Classic.  
+✅ Tidied up placement in addons list.  
 
 ⚠️ Known Issues / Notes  
 🔸 UI scale changes while in combat may temporarily delay bar repositioning.  
