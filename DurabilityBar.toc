@@ -3,10 +3,13 @@
 ## Notes: Movable & resizable durability bar with Blizzard-style border and colour thresholds.
 ## Author: Lanni of Alonsus
 ## Version: 1.2.4
+## X-Curse-Project-ID: 1358514
+## X-Wago-ID: ZKbx3ON1
 
 ## Category: Unit Frames
 ## SavedVariables: DurabilityBarDB
 ## IconTexture: Interface/AddOns/DurabilityBar/Icon.tga
 
 DurabilityBar.lua
+
 
