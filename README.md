@@ -1,56 +1,60 @@
-# DurabilityBar
-A clean, resizable durability bar for World of Warcraft.
+# SimpleDurabilityBar
 
-✨ Features
+**SimpleDurabilityBar** is a clean, resizable durability bar for World of Warcraft — designed to feel native, readable, and out of the way until you need it.
 
-Displays your overall equipment durability as a bar with percentage.
+## ✨ Features
+- Displays your overall equipment durability as a bar with percentage
+- Blizzard-style border with rounded edges for a native look
+- Dynamic durability colours:
+  - 🟢 Green (≥50%)
+  - 🟠 Amber (25–49%)
+  - 🔴 Red (<25%)
+- Movable and resizable:
+  - Drag to move
+  - Resize from the corner handle (when unlocked)
+- Tooltip (out of combat) showing:
+  - Durability by slot
+  - Estimated repair cost at vendors
+- Options panel integration (Esc → Options → AddOns → Durability Bar):
+  - Lock/unlock frame
+  - Show/hide percent text
+  - Toggle tooltip
+  - Hide when at 100%
+  - Adjust scale, width, and height
+  - Reset position/size
+  - Center or toggle visibility
 
-Blizzard-style border with rounded edges for a native look.
+## 💬 Slash Commands
+- `/durabar` — open settings
+- `/durabar options` — open settings
 
-Dynamic colors:
+## 📦 Install
+### CurseForge
+- Install via the CurseForge app or download the latest release.
 
-🟢 Green (≥50%)
+### Manual
+1. Download the latest release `.zip`.
+2. Extract into: `World of Warcraft/_retail_/Interface/AddOns/`
+3. Ensure the folder name is `SimpleDurabilityBar` (not nested).
+4. Relaunch the game.
 
-🟠 Amber (25–49%)
+## 🧩 Compatibility
+- **Game:** Retail
+- **Dependencies:** None
 
-🔴 Red (<25%)
+## 🔮 Future Plans
+- Optional fading instead of hiding at 100%
+- Custom textures and font styles
+- Profile support
 
-Movable and resizable: drag to move, resize from the corner handle (when unlocked).
+## 💬 Support & Community
+For bug reports, feature requests, release notes, and beta builds, join the official Discord:
 
-Tooltip (out of combat) showing durability by slot and repair cost at vendors.
+**LanniOfAlonsus • Addon Hub**  
+https://discord.gg/U8mKfHpeeP
 
-Options panel integration (Esc → Options → AddOns → Durability Bar):
+## 📜 License
+All Rights Reserved.
 
-Lock/unlock frame
-
-Show/hide percent text
-
-Toggle tooltip
-
-Hide when at 100%
-
-Adjust scale, width, and height
-
-Reset position/size
-
-Center or toggle visibility
-
-🛠️ Commands
-
-Type /durabar or /durabar options to quickly open settings.
-
-📦 Installation
-
-Download and unzip into your World of Warcraft/_retail_/Interface/AddOns/ folder.
-
-Launch/reload WoW.
-
-Access via /durabar or through Options → AddOns tab.
-
-🔮 Future Plans
-
-Optional fading instead of hiding at 100%.
-
-Custom textures and font styles.
-
-Profile support.
+## ❤️ Credits
+- **Author:** LanniOfAlonsus
