@@ -1,9 +1,9 @@
-## 🧩 Addon Updates (2026-01-16)
+## 🧩 Addon Updates (2026-04-21)
 
-**SimpleDurabilityBar** — v1.2.5  
+**SimpleDurabilityBar** — v1.2.6  
 
 **Changes:**  
-• Release packaging update (standardised changelog + cleaner zip output).  
+• Updated toc for WoW 12.0.5 patch release.  
 
 **Fixes:**  
 • None.
