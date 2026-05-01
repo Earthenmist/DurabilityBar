@@ -16,6 +16,15 @@ local function Print(msg)
   DEFAULT_CHAT_FRAME:AddMessage("|cff00ff88DurabilityBar:|r " .. tostring(msg))
 end
 
+local function GetCoinTextureStringSafe(amount)
+  if C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString then
+    return C_CurrencyInfo.GetCoinTextureString(amount)
+  elseif GetCoinTextureString then
+    return GetCoinTextureString(amount)
+  end
+  return tostring(amount or 0)
+end
+
 -- Defaults
 local defaults = {
   point = "CENTER",
@@ -178,6 +187,7 @@ end
 
 -- Forward declaration of options panel for slider range updates
 local optionsPanel
+local syncingOptions = false
 
 -- Orientation helper (handles repaint + slider ranges)
 local function UpdateOrientation()
@@ -251,7 +261,7 @@ local function ShowTooltip()
   if MerchantFrame and MerchantFrame:IsShown() and CanMerchantRepair and CanMerchantRepair() then
     local cost = GetRepairAllCost()
     if cost and cost > 0 then
-      GameTooltip:AddLine(("Repair cost: |cffffffff%s|r"):format(GetCoinTextureString(cost)), 0.9, 0.9, 0.9)
+      GameTooltip:AddLine(("Repair cost: |cffffffff%s|r"):format(GetCoinTextureStringSafe(cost)), 0.9, 0.9, 0.9)
     end
   end
 
@@ -335,6 +345,7 @@ local function CreateOptionsPanel()
   scaleSL:SetWidth(260); scaleSL:SetMinMaxValues(0.5, 2.0)
   scaleSL:SetValueStep(0.05); scaleSL:SetObeyStepOnDrag(true)
   scaleSL:SetScript("OnValueChanged", function(self, val)
+    if syncingOptions then return end
     DB.scale = tonumber(string.format("%.2f", val))
     frame:SetScale(DB.scale)
   end)
@@ -406,12 +417,14 @@ local function CreateOptionsPanel()
 
   -- Slider handlers: repaint after change
   widthSL:SetScript("OnValueChanged", function(self, val)
+    if syncingOptions then return end
     DB.width = math.floor(val + 0.5)
     frame:SetWidth(DB.width)
     Layout()
     Refresh()
   end)
   heightSL:SetScript("OnValueChanged", function(self, val)
+    if syncingOptions then return end
     DB.height = math.floor(val + 0.5)
     frame:SetHeight(DB.height)
     Layout()
@@ -560,21 +573,42 @@ local function CreateOptionsPanel()
     if frame:IsShown() then frame:Hide() else frame:Show() end
   end)
 
-  -- Sync widgets from DB when opened
-  panel:SetScript("OnShow", function()
-    lockCB:SetChecked(DB.locked)
-    textCB:SetChecked(DB.showPercentText)
-    tipCB:SetChecked(DB.showTooltip)
-    hideCB:SetChecked(DB.hideAtFull)
-    vtextCB:SetChecked(DB.verticalText)
-    autoswapCB:SetChecked(DB.autoSwapSize)
-    scaleSL:SetValue(DB.scale or 1)
-    oriH:SetChecked((DB.orientation or "HORIZONTAL") == "HORIZONTAL")
-    oriV:SetChecked((DB.orientation or "HORIZONTAL") == "VERTICAL")
+  local function SyncOptionsControls()
+    if not DB then return end
 
-    -- Apply slider ranges & values for current orientation
-    optionsPanel._ApplySliderRanges(DB.orientation)
+    syncingOptions = true
+
+    lockCB:SetChecked(DB.locked and true or false)
+    textCB:SetChecked(DB.showPercentText and true or false)
+    tipCB:SetChecked(DB.showTooltip and true or false)
+    hideCB:SetChecked(DB.hideAtFull and true or false)
+    vtextCB:SetChecked(DB.verticalText and true or false)
+    autoswapCB:SetChecked(DB.autoSwapSize and true or false)
+
+    local ori = (DB.orientation == "VERTICAL") and "VERTICAL" or "HORIZONTAL"
+    oriH:SetChecked(ori == "HORIZONTAL")
+    oriV:SetChecked(ori == "VERTICAL")
+
+    scaleSL:SetValue(DB.scale or 1)
+
+    syncingOptions = false
+
+    -- Apply slider ranges & values for current orientation. This also updates the frame.
+    optionsPanel._ApplySliderRanges(ori)
+  end
+
+  -- Sync widgets from DB when opened.
+  -- Retail's Settings canvas can paint the panel before every child has refreshed,
+  -- so do an immediate sync and a next-frame sync to prevent the first-open
+  -- "everything unchecked" state.
+  panel:SetScript("OnShow", function()
+    SyncOptionsControls()
+    if C_Timer and C_Timer.After then
+      C_Timer.After(0, SyncOptionsControls)
+    end
   end)
+
+  panel._SyncOptionsControls = SyncOptionsControls
 
   -- Register with Retail Settings UI (Dragonflight+)
   if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
@@ -586,6 +620,11 @@ local function CreateOptionsPanel()
     InterfaceOptions_AddCategory(panel) -- fallback
   else
     panel:Hide()
+  end
+
+  SyncOptionsControls()
+  if C_Timer and C_Timer.After then
+    C_Timer.After(0, SyncOptionsControls)
   end
 end
 -- ===== end Options Panel =====
