@@ -1,0 +1,11 @@
+## Interface: 11509, 20506, 38002, 50504
+## Title: Simple Durability Bar
+## Notes: Movable & resizable durability bar with Blizzard-style border and colour thresholds.
+## Author: Earthenmist
+## Version: 1.2.11
+
+## Category: Unit Frames
+## SavedVariables: DurabilityBarDB
+## IconTexture: Interface/AddOns/DurabilityBar/Icon.tga
+
+DurabilityBar.lua
